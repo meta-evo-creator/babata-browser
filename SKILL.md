@@ -8,7 +8,7 @@ metadata:
   openclaw:
     emoji: 🦞
     requires:
-      bins: [playwright]
+      bins: [python]
       env: []
     primaryEnv: ''
 ---
