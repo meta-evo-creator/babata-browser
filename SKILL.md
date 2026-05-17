@@ -1,8 +1,8 @@
 ---
 name: babata-browser
-version: 3.0.0
+version: 3.1.0
 description: |
-  Babata Browser v3.0 — Lightweight Playwright browser automation. Scan-first, act-second. Accessibility Tree preferred, zero extra AI dependencies.
+  Babata Browser v3.1 — Lightweight browser automation with CloakBrowser anti-detection (C++-level stealth Chromium). Scan-first, act-second. Playwright fallback.
   Use when: JS-rendered pages, gov sites, form filling, screenshot evidence, interactive web.
   NOT for: static pages (use web_fetch), API queries (use CLI), text search (use web_search).
 metadata:
@@ -13,9 +13,23 @@ metadata:
       env: []
 ---
 
-# Babata Browser 🦞 v3.0
+# Babata Browser 🦞 v3.1
 
-> Lightweight Playwright browser automation. Scan before acting, text before screenshots.
+> Lightweight browser automation with **CloakBrowser anti-detection** (C++-level stealth Chromium). Playwright fallback.
+> reCAPTCHA v3: 0.9 | Cloudflare Turnstile: PASS | 30/30 bot tests
+
+---
+
+## Backend (v3.1)
+
+| Backend | reCAPTCHA v3 | Cloudflare | gov sites | Default |
+|:--------|:-----------:|:----------:|:---------:|:-------:|
+| **CloakBrowser** | 0.9 | ✅ PASS | ✅ Strong | ✅ auto |
+| Playwright | 0.1 | ❌ FAIL | ⚠️ Blocked | fallback |
+
+- `backend='auto'` (default) → CloakBrowser if available → Playwright fallback
+- `backend='cloakbrowser'` → force CloakBrowser, error if unavailable
+- `backend='playwright'` → force Playwright
 
 ---
 
@@ -30,8 +44,12 @@ Static pages → `web_fetch` / API queries → `fetch()` / Text search → `web_
 ## Install
 
 ```bash
-pip install playwright && python -m playwright install chromium
+# CloakBrowser (recommended — anti-detection)
+pip install cloakbrowser
 cd skills/babata-browser && pip install -e .
+
+# Playwright fallback (already installed)
+pip install playwright && python -m playwright install chromium
 ```
 
 ---

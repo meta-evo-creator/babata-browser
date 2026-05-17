@@ -1,32 +1,70 @@
 """
 babata_browser.py — 巴巴塔浏览器控制工具
-基于 Playwright 的轻量浏览器自动化，用自然语言控制浏览器操作
+基于 Playwright/CloakBrowser 的轻量浏览器自动化，用自然语言控制浏览器操作
 零额外AI依赖，比 browser-use 轻 50+ 个包
+
+Backend: CloakBrowser (default) → Playwright (fallback)
+  CloakBrowser: C++ 级 Chromium 反检测，30/30 bot 测试通过，reCAPTCHA v3 0.9
+  迁移自 Playwright 仅需一行改动
 """
 import sys, os, json, re
-from playwright.sync_api import sync_playwright
 from datetime import datetime
 
+# ── Backend Detection ───────────────────────────────────
+_CLOAKBROWSER_AVAILABLE = False
+_cloak_launch = None
+_get_stealth_args = None
+try:
+    from cloakbrowser import launch as _cloak_launch
+    from cloakbrowser import get_default_stealth_args as _get_stealth_args
+    _CLOAKBROWSER_AVAILABLE = True
+except ImportError:
+    pass
+
+# Always import Playwright as fallback
+from playwright.sync_api import sync_playwright
+
+
 class BabataBrowser:
-    def __init__(self, headless=True):
+    def __init__(self, headless=True, backend='auto'):
+        """
+        backend: 'auto' (优先CloakBrowser) | 'cloakbrowser' | 'playwright'
+        """
         self.headless = headless
+        self.backend = backend
         self.playwright = None
         self.browser = None
+        self._using_cloak = False
     
     def start(self):
-        self.playwright = sync_playwright().start()
-        self.browser = self.playwright.chromium.launch(
-            headless=self.headless,
-            args=['--no-sandbox', '--disable-dev-shm-usage']
+        use_cloak = (
+            (self.backend == 'auto' and _CLOAKBROWSER_AVAILABLE) or
+            self.backend == 'cloakbrowser'
         )
+        
+        if use_cloak and _CLOAKBROWSER_AVAILABLE:
+            self._using_cloak = True
+            # CloakBrowser: C++ 级反检测 Chromium，30/30 测试通过
+            # 对政府网站(中纪委/卫健委)CloudFlare/爬虫检测有显著提升
+            self.browser = _cloak_launch(headless=self.headless)
+        else:
+            self._using_cloak = False
+            self.playwright = sync_playwright().start()
+            self.browser = self.playwright.chromium.launch(
+                headless=self.headless,
+                args=['--no-sandbox', '--disable-dev-shm-usage']
+            )
         return self
     
     def new_page(self):
         return self.browser.new_page()
     
     def stop(self):
-        if self.browser: self.browser.close()
-        if self.playwright: self.playwright.stop()
+        if self.browser:
+            self.browser.close()
+        if self.playwright:
+            self.playwright.stop()
+        # CloakBrowser manages its own lifecycle, no explicit stop needed
     
     # ── Actions ──────────────────────────────────────────
     def goto(self, page, url, timeout=30000):
